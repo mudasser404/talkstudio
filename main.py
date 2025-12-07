@@ -225,20 +225,20 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print(f"""
-    ╔══════════════════════════════════════════════════════════════════╗
-    ║              F5-TTS Voice Cloning API Server v2.0                ║
-    ╠══════════════════════════════════════════════════════════════════╣
-    ║  Host: {args.host:<15}  Port: {args.port:<10}                    ║
-    ║                                                                  ║
-    ║  Web UI:       http://{args.host}:{args.port}/ui                     ║
-    ║  API Docs:     http://{args.host}:{args.port}/docs                   ║
-    ║  ReDoc:        http://{args.host}:{args.port}/redoc                  ║
-    ║                                                                  ║
-    ║  Endpoints:                                                      ║
-    ║    - TTS Generation:  /api/tts/*                                 ║
-    ║    - Training:        /api/training/*                            ║
-    ║    - Datasets:        /api/datasets/*                            ║
-    ╚══════════════════════════════════════════════════════════════════╝
+    ================================================================
+              F5-TTS Voice Cloning API Server v2.0
+    ================================================================
+      Host: {args.host:<15}  Port: {args.port:<10}
+
+      Web UI:       http://{args.host}:{args.port}/ui
+      API Docs:     http://{args.host}:{args.port}/docs
+      ReDoc:        http://{args.host}:{args.port}/redoc
+
+      Endpoints:
+        - TTS Generation:  /api/tts/*
+        - Training:        /api/training/*
+        - Datasets:        /api/datasets/*
+    ================================================================
     """)
 
     uvicorn.run(

@@ -215,6 +215,25 @@ async def load_model(request: ModelLoadRequest):
         raise HTTPException(status_code=500, detail="Failed to load model")
 
 
+@router.post("/model/reload")
+async def reload_default_model():
+    """
+    Reload the default F5-TTS model
+
+    Use this to reload the default model after installation or if model failed to load initially.
+    """
+    # Unload current model first
+    tts_service.unload_model()
+
+    # Load default model
+    success = tts_service.load_model()
+
+    if success:
+        return {"success": True, "message": "Default model loaded successfully"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to load default model")
+
+
 @router.post("/model/unload")
 async def unload_model():
     """Unload the current model to free memory"""
