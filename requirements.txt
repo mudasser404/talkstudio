@@ -1,0 +1,58 @@
+# ====================================
+# F5-TTS API Server Requirements
+# Python 3.10+
+# GPU Server with CUDA support
+# ====================================
+
+# Web Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# PyTorch with CUDA (install separately based on your CUDA version)
+# For CUDA 11.8:
+# pip install torch==2.1.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
+# For CUDA 12.1:
+# pip install torch==2.1.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu121
+
+# Audio Processing
+soundfile>=0.12.1
+librosa>=0.10.1
+noisereduce>=3.0.0
+scipy>=1.11.0
+numpy>=1.24.0
+
+# ML/DL Framework (for training)
+accelerate>=0.25.0
+ema-pytorch>=0.3.0
+safetensors>=0.4.0
+transformers>=4.36.0
+
+# F5-TTS Dependencies
+cached_path>=1.5.0
+hydra-core>=1.3.0
+omegaconf>=2.3.0
+datasets>=2.15.0
+einops>=0.7.0
+vocos>=0.1.0
+jieba>=0.42.1
+pypinyin>=0.50.0
+
+# Utilities
+python-dotenv>=1.0.0
+tqdm>=4.66.0
+
+# Optional: Training logging
+wandb>=0.16.0
+tensorboard>=2.15.0
+
+# Optional: 8-bit optimizer (Linux only)
+# bitsandbytes>=0.41.0
+
+# F5-TTS Model - Install from local folder or GitHub
+# Option 1: Install from local F5-TTS folder
+# pip install -e ./F5-TTS
+# Option 2: Install from GitHub
+# pip install git+https://github.com/SWivid/F5-TTS.git

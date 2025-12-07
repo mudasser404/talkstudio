@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F5-TTS Voice Cloning Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #8b5cf6;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #475569;
+            --success-color: #22c55e;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            padding: 1rem 2rem;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .nav-tabs {
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .nav-tabs .nav-link {
+            color: var(--text-secondary);
+            border: none;
+            padding: 1rem 2rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: var(--text-primary);
+            border: none;
+        }
+
+        .nav-tabs .nav-link.active {
+            background: transparent;
+            color: var(--primary-color);
+            border: none;
+            border-bottom: 3px solid var(--primary-color);
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+        }
+
+        .form-control, .form-select {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 8px;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background: var(--bg-input);
+            border-color: var(--primary-color);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .form-control::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-outline-primary {
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-online { background: rgba(34, 197, 94, 0.2); color: var(--success-color); }
+        .status-offline { background: rgba(239, 68, 68, 0.2); color: var(--danger-color); }
+        .status-loading { background: rgba(245, 158, 11, 0.2); color: var(--warning-color); }
+
+        .audio-player {
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--primary-color);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--primary-color);
+            background: rgba(99, 102, 241, 0.2);
+        }
+
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+            background: var(--bg-input);
+        }
+
+        .progress-bar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+
+        .table {
+            color: var(--text-primary);
+        }
+
+        .table thead th {
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .table td {
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        .spinner-border {
+            width: 1rem;
+            height: 1rem;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .log-viewer {
+            background: #000;
+            color: #22c55e;
+            font-family: 'Consolas', monospace;
+            font-size: 0.85rem;
+            padding: 1rem;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--bg-card), var(--bg-input));
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .stat-card p {
+            color: var(--text-secondary);
+            margin: 0.5rem 0 0 0;
+        }
+
+        .form-range {
+            background: transparent;
+        }
+
+        .form-range::-webkit-slider-track {
+            background: var(--bg-input);
+        }
+
+        .form-range::-webkit-slider-thumb {
+            background: var(--primary-color);
+        }
+
+        .dataset-item {
+            background: var(--bg-input);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .animate-pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-soundwave me-2"></i>F5-TTS Studio
+            </a>
+            <div class="d-flex align-items-center">
+                <span id="serverStatus" class="status-badge status-loading me-3">
+                    <i class="bi bi-circle-fill me-1"></i>Connecting...
+                </span>
+                <span id="gpuStatus" class="status-badge status-loading">
+                    <i class="bi bi-gpu-card me-1"></i>GPU: Checking...
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-4">
+        <!-- Tabs -->
+        <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#ttsTab">
+                    <i class="bi bi-mic-fill me-2"></i>Voice Generation
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#datasetsTab">
+                    <i class="bi bi-database me-2"></i>Datasets
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#trainingTab">
+                    <i class="bi bi-cpu me-2"></i>Training
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modelsTab">
+                    <i class="bi bi-box me-2"></i>Models
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- TTS Tab -->
+            <div class="tab-pane fade show active" id="ttsTab">
+                <div class="row">
+                    <div class="col-lg-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-upload me-2"></i>Reference Audio</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="upload-zone" id="audioDropZone">
+                                    <i class="bi bi-cloud-arrow-up display-4 text-secondary"></i>
+                                    <p class="mt-2 mb-1">Drag & drop audio file here</p>
+                                    <p class="text-secondary small">or click to browse (WAV, MP3)</p>
+                                    <input type="file" id="referenceAudio" accept="audio/*" hidden>
+                                </div>
+                                <div id="audioPreview" class="mt-3" style="display: none;">
+                                    <audio id="refAudioPlayer" controls class="audio-player"></audio>
+                                    <p class="text-secondary small mt-2" id="audioFileName"></p>
+                                </div>
+
+                                <div class="mt-3">
+                                    <label class="form-label">Reference Text (Optional)</label>
+                                    <textarea class="form-control" id="referenceText" rows="2"
+                                        placeholder="Transcript of reference audio (helps with voice cloning quality)"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-chat-text me-2"></i>Text to Synthesize</h5>
+                            </div>
+                            <div class="card-body">
+                                <textarea class="form-control" id="synthesizeText" rows="5"
+                                    placeholder="Enter the text you want to convert to speech..."></textarea>
+                                <small class="text-secondary"><span id="charCount">0</span> / 50000 characters</small>
+
+                                <div class="row mt-4">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Speed: <span id="speedValue">1.0</span>x</label>
+                                        <input type="range" class="form-range" id="speed" min="0.5" max="2.0" step="0.1" value="1.0">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">NFE Steps: <span id="nfeValue">32</span></label>
+                                        <input type="range" class="form-range" id="nfeStep" min="8" max="64" step="4" value="32">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">CFG Strength: <span id="cfgValue">2.0</span></label>
+                                        <input type="range" class="form-range" id="cfgStrength" min="0" max="5" step="0.5" value="2.0">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check mt-4">
+                                            <input class="form-check-input" type="checkbox" id="cleanAudio" checked>
+                                            <label class="form-check-label">Clean Audio (Noise Reduction)</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button class="btn btn-primary w-100 mt-3" id="generateBtn" onclick="generateSpeech()">
+                                    <i class="bi bi-play-fill me-2"></i>Generate Speech
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Output Section -->
+                <div class="card" id="outputSection" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-volume-up me-2"></i>Generated Audio</h5>
+                    </div>
+                    <div class="card-body">
+                        <audio id="outputAudio" controls class="audio-player"></audio>
+                        <div class="row mt-3">
+                            <div class="col-md-3">
+                                <p class="text-secondary mb-1">Duration</p>
+                                <p class="fw-bold" id="outputDuration">-</p>
+                            </div>
+                            <div class="col-md-3">
+                                <p class="text-secondary mb-1">Sample Rate</p>
+                                <p class="fw-bold" id="outputSampleRate">-</p>
+                            </div>
+                            <div class="col-md-3">
+                                <p class="text-secondary mb-1">File Size</p>
+                                <p class="fw-bold" id="outputFileSize">-</p>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-outline-primary" onclick="downloadAudio()">
+                                    <i class="bi bi-download me-2"></i>Download
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Datasets Tab -->
+            <div class="tab-pane fade" id="datasetsTab">
+                <div class="row">
+                    <div class="col-lg-4 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create Dataset</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Dataset Name</label>
+                                    <input type="text" class="form-control" id="datasetName" placeholder="my_voice_dataset">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Description</label>
+                                    <textarea class="form-control" id="datasetDesc" rows="2" placeholder="Dataset description..."></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Language</label>
+                                    <select class="form-select" id="datasetLang">
+                                        <option value="en">English</option>
+                                        <option value="zh">Chinese</option>
+                                        <option value="multilingual">Multilingual</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary w-100" onclick="createDataset()">
+                                    <i class="bi bi-plus me-2"></i>Create Dataset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-8 mb-4">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="bi bi-collection me-2"></i>My Datasets</h5>
+                                <button class="btn btn-sm btn-outline-primary" onclick="loadDatasets()">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="datasetsList">
+                                    <p class="text-secondary text-center py-4">Loading datasets...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upload Section -->
+                <div class="card" id="uploadSection" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-cloud-upload me-2"></i>Upload Audio Files to: <span id="uploadDatasetName"></span></h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="upload-zone" id="datasetDropZone">
+                            <i class="bi bi-files display-4 text-secondary"></i>
+                            <p class="mt-2 mb-1">Drag & drop multiple audio files here</p>
+                            <p class="text-secondary small">WAV, MP3, FLAC supported</p>
+                            <input type="file" id="datasetAudioFiles" accept="audio/*" multiple hidden>
+                        </div>
+
+                        <div id="uploadQueue" class="mt-3"></div>
+
+                        <div class="mt-3" id="bulkUploadSection" style="display: none;">
+                            <label class="form-label">Transcripts (one per line, same order as files)</label>
+                            <textarea class="form-control" id="bulkTranscripts" rows="5"
+                                placeholder="First audio transcript&#10;Second audio transcript&#10;Third audio transcript"></textarea>
+                            <button class="btn btn-primary mt-3" onclick="uploadBulkAudio()">
+                                <i class="bi bi-upload me-2"></i>Upload All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Training Tab -->
+            <div class="tab-pane fade" id="trainingTab">
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <h3 id="totalJobs">0</h3>
+                            <p>Total Jobs</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <h3 id="activeJobs" class="text-warning">0</h3>
+                            <p>Active Jobs</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <h3 id="completedJobs" class="text-success">0</h3>
+                            <p>Completed</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <h3 id="failedJobs" class="text-danger">0</h3>
+                            <p>Failed</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-5 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-rocket me-2"></i>Start New Training</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Select Dataset</label>
+                                    <select class="form-select" id="trainingDataset">
+                                        <option value="">Select a prepared dataset...</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Model Type</label>
+                                    <select class="form-select" id="modelType">
+                                        <option value="F5TTS_v1_Base">F5TTS v1 Base (Recommended)</option>
+                                        <option value="F5TTS_Base">F5TTS Base</option>
+                                        <option value="E2TTS_Base">E2TTS Base</option>
+                                    </select>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Learning Rate</label>
+                                        <input type="number" class="form-control" id="learningRate" value="0.00001" step="0.000001">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Epochs</label>
+                                        <input type="number" class="form-control" id="epochs" value="100" min="1">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Batch Size (frames)</label>
+                                        <input type="number" class="form-control" id="batchSize" value="3200" min="100">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Save Every (updates)</label>
+                                        <input type="number" class="form-control" id="savePerUpdates" value="5000" min="100">
+                                    </div>
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="usePretrained" checked>
+                                    <label class="form-check-label">Use Pretrained Model (Recommended)</label>
+                                </div>
+
+                                <button class="btn btn-primary w-100" onclick="startTraining()">
+                                    <i class="bi bi-play-fill me-2"></i>Start Training
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-7 mb-4">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="bi bi-list-task me-2"></i>Training Jobs</h5>
+                                <button class="btn btn-sm btn-outline-primary" onclick="loadTrainingJobs()">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="trainingJobsList">
+                                    <p class="text-secondary text-center py-4">Loading training jobs...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Training Details Modal -->
+                <div class="card mt-4" id="trainingDetails" style="display: none;">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Training Details: <span id="detailJobId"></span></h5>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="hideTrainingDetails()">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <p class="text-secondary mb-1">Status</p>
+                                <p class="fw-bold" id="detailStatus">-</p>
+                            </div>
+                            <div class="col-md-3">
+                                <p class="text-secondary mb-1">Current Update</p>
+                                <p class="fw-bold" id="detailUpdate">-</p>
+                            </div>
+                            <div class="col-md-3">
+                                <p class="text-secondary mb-1">Loss</p>
+                                <p class="fw-bold" id="detailLoss">-</p>
+                            </div>
+                            <div class="col-md-3">
+                                <p class="text-secondary mb-1">Learning Rate</p>
+                                <p class="fw-bold" id="detailLR">-</p>
+                            </div>
+                        </div>
+
+                        <h6><i class="bi bi-terminal me-2"></i>Training Logs</h6>
+                        <div class="log-viewer" id="trainingLogs">
+                            Loading logs...
+                        </div>
+
+                        <div class="mt-3">
+                            <h6><i class="bi bi-save me-2"></i>Checkpoints</h6>
+                            <div id="checkpointsList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Models Tab -->
+            <div class="tab-pane fade" id="modelsTab">
+                <div class="row">
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-cpu me-2"></i>Current Model</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="text-secondary mb-1">Status</p>
+                                        <p class="fw-bold" id="modelStatus">-</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p class="text-secondary mb-1">Device</p>
+                                        <p class="fw-bold" id="modelDevice">-</p>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <button class="btn btn-outline-danger me-2" onclick="unloadModel()">
+                                        <i class="bi bi-stop-fill me-2"></i>Unload Model
+                                    </button>
+                                    <button class="btn btn-outline-primary" onclick="refreshModelStatus()">
+                                        <i class="bi bi-arrow-clockwise me-2"></i>Refresh
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-folder-plus me-2"></i>Load Custom Model</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Model Path</label>
+                                    <input type="text" class="form-control" id="customModelPath"
+                                        placeholder="D:/checkpoints/model_10000.pt">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Model Type</label>
+                                    <select class="form-select" id="customModelType">
+                                        <option value="F5TTS_v1_Base">F5TTS v1 Base</option>
+                                        <option value="F5TTS_Base">F5TTS Base</option>
+                                        <option value="E2TTS_Base">E2TTS Base</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary" onclick="loadCustomModel()">
+                                    <i class="bi bi-box-arrow-in-down me-2"></i>Load Model
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9998; justify-content: center; align-items: center;">
+        <div class="text-center">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+            <p class="mt-3" id="loadingText">Processing...</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '';
+        let currentDatasetId = null;
+        let currentJobId = null;
+        let generatedAudioBlob = null;
+        let uploadFiles = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkServerStatus();
+            loadDatasets();
+            loadTrainingJobs();
+            setupEventListeners();
+            setInterval(checkServerStatus, 30000);
+            setInterval(loadTrainingJobs, 10000);
+        });
+
+        function setupEventListeners() {
+            // Audio upload zone
+            const audioZone = document.getElementById('audioDropZone');
+            const audioInput = document.getElementById('referenceAudio');
+
+            audioZone.addEventListener('click', () => audioInput.click());
+            audioZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                audioZone.classList.add('dragover');
+            });
+            audioZone.addEventListener('dragleave', () => audioZone.classList.remove('dragover'));
+            audioZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                audioZone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    handleAudioFile(e.dataTransfer.files[0]);
+                }
+            });
+            audioInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    handleAudioFile(e.target.files[0]);
+                }
+            });
+
+            // Dataset upload zone
+            const datasetZone = document.getElementById('datasetDropZone');
+            const datasetInput = document.getElementById('datasetAudioFiles');
+
+            datasetZone.addEventListener('click', () => datasetInput.click());
+            datasetZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                datasetZone.classList.add('dragover');
+            });
+            datasetZone.addEventListener('dragleave', () => datasetZone.classList.remove('dragover'));
+            datasetZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                datasetZone.classList.remove('dragover');
+                handleDatasetFiles(e.dataTransfer.files);
+            });
+            datasetInput.addEventListener('change', (e) => {
+                handleDatasetFiles(e.target.files);
+            });
+
+            // Text character count
+            document.getElementById('synthesizeText').addEventListener('input', (e) => {
+                document.getElementById('charCount').textContent = e.target.value.length;
+            });
+
+            // Range sliders
+            document.getElementById('speed').addEventListener('input', (e) => {
+                document.getElementById('speedValue').textContent = e.target.value;
+            });
+            document.getElementById('nfeStep').addEventListener('input', (e) => {
+                document.getElementById('nfeValue').textContent = e.target.value;
+            });
+            document.getElementById('cfgStrength').addEventListener('input', (e) => {
+                document.getElementById('cfgValue').textContent = e.target.value;
+            });
+        }
+
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/status`);
+                const data = await response.json();
+
+                document.getElementById('serverStatus').className = 'status-badge status-online';
+                document.getElementById('serverStatus').innerHTML = '<i class="bi bi-circle-fill me-1"></i>Online';
+
+                if (data.gpu && data.gpu.available) {
+                    document.getElementById('gpuStatus').className = 'status-badge status-online';
+                    document.getElementById('gpuStatus').innerHTML = `<i class="bi bi-gpu-card me-1"></i>${data.gpu.name || 'GPU Ready'}`;
+                } else {
+                    document.getElementById('gpuStatus').className = 'status-badge status-warning';
+                    document.getElementById('gpuStatus').innerHTML = '<i class="bi bi-gpu-card me-1"></i>CPU Mode';
+                }
+
+                document.getElementById('modelStatus').textContent = data.model_loaded ? 'Loaded' : 'Not Loaded';
+                document.getElementById('modelDevice').textContent = data.device || '-';
+
+            } catch (error) {
+                document.getElementById('serverStatus').className = 'status-badge status-offline';
+                document.getElementById('serverStatus').innerHTML = '<i class="bi bi-circle-fill me-1"></i>Offline';
+            }
+        }
+
+        function handleAudioFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('refAudioPlayer').src = e.target.result;
+                document.getElementById('audioFileName').textContent = file.name;
+                document.getElementById('audioPreview').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleDatasetFiles(files) {
+            uploadFiles = Array.from(files);
+            const queue = document.getElementById('uploadQueue');
+            queue.innerHTML = uploadFiles.map((f, i) => `
+                <div class="dataset-item d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-file-music me-2"></i>${f.name}</span>
+                    <span class="text-secondary">${(f.size / 1024).toFixed(1)} KB</span>
+                </div>
+            `).join('');
+
+            document.getElementById('bulkUploadSection').style.display = 'block';
+        }
+
+        async function generateSpeech() {
+            const text = document.getElementById('synthesizeText').value;
+            const audioInput = document.getElementById('referenceAudio');
+
+            if (!text.trim()) {
+                showToast('Please enter text to synthesize', 'warning');
+                return;
+            }
+
+            if (!audioInput.files.length) {
+                showToast('Please upload a reference audio file', 'warning');
+                return;
+            }
+
+            showLoading('Generating speech...');
+
+            try {
+                const formData = new FormData();
+                formData.append('text', text);
+                formData.append('reference_audio', audioInput.files[0]);
+                formData.append('reference_text', document.getElementById('referenceText').value);
+                formData.append('speed', document.getElementById('speed').value);
+                formData.append('nfe_step', document.getElementById('nfeStep').value);
+                formData.append('cfg_strength', document.getElementById('cfgStrength').value);
+                formData.append('clean_audio', document.getElementById('cleanAudio').checked);
+                formData.append('remove_silence', 'false');
+
+                const response = await fetch(`${API_BASE}/api/tts/generate/file`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.audio_data) {
+                    const audioBlob = base64ToBlob(data.audio_data, 'audio/wav');
+                    generatedAudioBlob = audioBlob;
+                    const audioUrl = URL.createObjectURL(audioBlob);
+
+                    document.getElementById('outputAudio').src = audioUrl;
+                    document.getElementById('outputDuration').textContent = `${data.duration?.toFixed(2) || '-'} sec`;
+                    document.getElementById('outputSampleRate').textContent = `${data.sample_rate || '-'} Hz`;
+                    document.getElementById('outputFileSize').textContent = `${((data.file_size || 0) / 1024).toFixed(1)} KB`;
+                    document.getElementById('outputSection').style.display = 'block';
+
+                    showToast('Speech generated successfully!', 'success');
+                } else {
+                    showToast(data.error || 'Generation failed', 'danger');
+                }
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function downloadAudio() {
+            if (generatedAudioBlob) {
+                const url = URL.createObjectURL(generatedAudioBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `generated_${Date.now()}.wav`;
+                a.click();
+            }
+        }
+
+        async function createDataset() {
+            const name = document.getElementById('datasetName').value;
+            if (!name.trim()) {
+                showToast('Please enter a dataset name', 'warning');
+                return;
+            }
+
+            showLoading('Creating dataset...');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/datasets/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        description: document.getElementById('datasetDesc').value,
+                        language: document.getElementById('datasetLang').value,
+                        is_finetune: true
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Dataset created successfully!', 'success');
+                    document.getElementById('datasetName').value = '';
+                    document.getElementById('datasetDesc').value = '';
+                    loadDatasets();
+                } else {
+                    showToast(data.error || 'Failed to create dataset', 'danger');
+                }
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function loadDatasets() {
+            try {
+                const response = await fetch(`${API_BASE}/api/datasets/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    renderDatasets(data.datasets);
+                    updateTrainingDatasetSelect(data.datasets);
+                }
+            } catch (error) {
+                document.getElementById('datasetsList').innerHTML = '<p class="text-danger">Failed to load datasets</p>';
+            }
+        }
+
+        function renderDatasets(datasets) {
+            if (!datasets.length) {
+                document.getElementById('datasetsList').innerHTML = '<p class="text-secondary text-center py-4">No datasets yet. Create one to get started!</p>';
+                return;
+            }
+
+            document.getElementById('datasetsList').innerHTML = datasets.map(ds => `
+                <div class="dataset-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">${ds.name}</h6>
+                            <p class="text-secondary small mb-1">
+                                ${ds.total_samples} samples | ${ds.total_duration?.toFixed(2) || 0} hours
+                            </p>
+                            <span class="badge ${getStatusBadgeClass(ds.status)}">${ds.status}</span>
+                        </div>
+                        <div>
+                            ${ds.status === 'pending' || ds.status === 'uploading' ? `
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="selectDatasetForUpload('${ds.dataset_id}', '${ds.name}')">
+                                    <i class="bi bi-upload"></i>
+                                </button>
+                                <button class="btn btn-sm btn-primary me-1" onclick="prepareDataset('${ds.dataset_id}')">
+                                    <i class="bi bi-gear"></i> Prepare
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteDataset('${ds.dataset_id}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateTrainingDatasetSelect(datasets) {
+            const select = document.getElementById('trainingDataset');
+            const preparedDatasets = datasets.filter(d => d.status === 'completed');
+
+            select.innerHTML = '<option value="">Select a prepared dataset...</option>' +
+                preparedDatasets.map(d => `<option value="${d.dataset_id}">${d.name} (${d.total_samples} samples)</option>`).join('');
+        }
+
+        function selectDatasetForUpload(id, name) {
+            currentDatasetId = id;
+            document.getElementById('uploadDatasetName').textContent = name;
+            document.getElementById('uploadSection').style.display = 'block';
+            uploadFiles = [];
+            document.getElementById('uploadQueue').innerHTML = '';
+            document.getElementById('bulkUploadSection').style.display = 'none';
+        }
+
+        async function uploadBulkAudio() {
+            if (!currentDatasetId || !uploadFiles.length) {
+                showToast('No files selected', 'warning');
+                return;
+            }
+
+            const transcripts = document.getElementById('bulkTranscripts').value.split('\n').filter(t => t.trim());
+
+            if (transcripts.length !== uploadFiles.length) {
+                showToast(`Please provide ${uploadFiles.length} transcripts (one per line)`, 'warning');
+                return;
+            }
+
+            showLoading('Uploading files...');
+
+            let success = 0;
+            let failed = 0;
+
+            for (let i = 0; i < uploadFiles.length; i++) {
+                try {
+                    const formData = new FormData();
+                    formData.append('audio', uploadFiles[i]);
+                    formData.append('text', transcripts[i]);
+
+                    const response = await fetch(`${API_BASE}/api/datasets/${currentDatasetId}/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    if (data.success) success++;
+                    else failed++;
+                } catch (error) {
+                    failed++;
+                }
+            }
+
+            hideLoading();
+            showToast(`Uploaded: ${success} success, ${failed} failed`, success > 0 ? 'success' : 'danger');
+            loadDatasets();
+
+            uploadFiles = [];
+            document.getElementById('uploadQueue').innerHTML = '';
+            document.getElementById('bulkTranscripts').value = '';
+            document.getElementById('bulkUploadSection').style.display = 'none';
+        }
+
+        async function prepareDataset(id) {
+            showLoading('Preparing dataset for training...');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/datasets/${id}/prepare`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Dataset preparation started!', 'success');
+                } else {
+                    showToast(data.error || 'Failed to prepare dataset', 'danger');
+                }
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            } finally {
+                hideLoading();
+                loadDatasets();
+            }
+        }
+
+        async function deleteDataset(id) {
+            if (!confirm('Are you sure you want to delete this dataset?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/datasets/${id}?delete_files=true`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Dataset deleted', 'success');
+                    loadDatasets();
+                } else {
+                    showToast('Failed to delete dataset', 'danger');
+                }
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            }
+        }
+
+        async function startTraining() {
+            const datasetId = document.getElementById('trainingDataset').value;
+
+            if (!datasetId) {
+                showToast('Please select a dataset', 'warning');
+                return;
+            }
+
+            showLoading('Starting training job...');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/training/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        dataset_id: datasetId,
+                        config: {
+                            exp_name: document.getElementById('modelType').value,
+                            learning_rate: parseFloat(document.getElementById('learningRate').value),
+                            epochs: parseInt(document.getElementById('epochs').value),
+                            batch_size_per_gpu: parseInt(document.getElementById('batchSize').value),
+                            save_per_updates: parseInt(document.getElementById('savePerUpdates').value),
+                            use_pretrained: document.getElementById('usePretrained').checked
+                        }
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Training started!', 'success');
+                    loadTrainingJobs();
+                } else {
+                    showToast(data.error || 'Failed to start training', 'danger');
+                }
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function loadTrainingJobs() {
+            try {
+                const [jobsResponse, statsResponse] = await Promise.all([
+                    fetch(`${API_BASE}/api/training/jobs`),
+                    fetch(`${API_BASE}/api/training/stats`)
+                ]);
+
+                const jobsData = await jobsResponse.json();
+                const statsData = await statsResponse.json();
+
+                if (jobsData.success) {
+                    renderTrainingJobs(jobsData.jobs);
+                }
+
+                document.getElementById('totalJobs').textContent = statsData.total_jobs || 0;
+                document.getElementById('activeJobs').textContent = statsData.active_jobs || 0;
+                document.getElementById('completedJobs').textContent = statsData.completed_jobs || 0;
+                document.getElementById('failedJobs').textContent = statsData.failed_jobs || 0;
+
+            } catch (error) {
+                console.error('Failed to load training jobs:', error);
+            }
+        }
+
+        function renderTrainingJobs(jobs) {
+            if (!jobs.length) {
+                document.getElementById('trainingJobsList').innerHTML = '<p class="text-secondary text-center py-4">No training jobs yet</p>';
+                return;
+            }
+
+            document.getElementById('trainingJobsList').innerHTML = `
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Job ID</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                            <th>Loss</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${jobs.map(job => `
+                            <tr>
+                                <td><code>${job.job_id}</code></td>
+                                <td><span class="badge ${getStatusBadgeClass(job.status)}">${job.status}</span></td>
+                                <td>
+                                    ${job.status === 'training' ? `
+                                        <div class="progress" style="width: 100px;">
+                                            <div class="progress-bar animate-pulse" style="width: 100%"></div>
+                                        </div>
+                                        <small>Update: ${job.current_update || 0}</small>
+                                    ` : '-'}
+                                </td>
+                                <td>${job.loss?.toFixed(4) || '-'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary me-1" onclick="showTrainingDetails('${job.job_id}')">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    ${job.status === 'training' ? `
+                                        <button class="btn btn-sm btn-outline-danger" onclick="cancelTraining('${job.job_id}')">
+                                            <i class="bi bi-stop-fill"></i>
+                                        </button>
+                                    ` : ''}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function showTrainingDetails(jobId) {
+            currentJobId = jobId;
+            document.getElementById('detailJobId').textContent = jobId;
+            document.getElementById('trainingDetails').style.display = 'block';
+
+            await refreshTrainingDetails();
+        }
+
+        async function refreshTrainingDetails() {
+            if (!currentJobId) return;
+
+            try {
+                const [jobResponse, logsResponse, checkpointsResponse] = await Promise.all([
+                    fetch(`${API_BASE}/api/training/jobs/${currentJobId}`),
+                    fetch(`${API_BASE}/api/training/jobs/${currentJobId}/logs?lines=50`),
+                    fetch(`${API_BASE}/api/training/jobs/${currentJobId}/checkpoints`)
+                ]);
+
+                const jobData = await jobResponse.json();
+                const logsData = await logsResponse.json();
+                const checkpointsData = await checkpointsResponse.json();
+
+                if (jobData.success) {
+                    document.getElementById('detailStatus').innerHTML = `<span class="badge ${getStatusBadgeClass(jobData.status)}">${jobData.status}</span>`;
+                    document.getElementById('detailUpdate').textContent = jobData.current_update || 0;
+                    document.getElementById('detailLoss').textContent = jobData.loss?.toFixed(4) || '-';
+                    document.getElementById('detailLR').textContent = jobData.learning_rate?.toExponential(2) || '-';
+                }
+
+                if (logsData.success) {
+                    document.getElementById('trainingLogs').textContent = logsData.logs || 'No logs available';
+                }
+
+                if (checkpointsData.success) {
+                    renderCheckpoints(checkpointsData.checkpoints);
+                }
+
+            } catch (error) {
+                console.error('Failed to load training details:', error);
+            }
+        }
+
+        function renderCheckpoints(checkpoints) {
+            if (!checkpoints.length) {
+                document.getElementById('checkpointsList').innerHTML = '<p class="text-secondary">No checkpoints yet</p>';
+                return;
+            }
+
+            document.getElementById('checkpointsList').innerHTML = checkpoints.slice(0, 5).map(cp => `
+                <div class="dataset-item d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-save me-2"></i>${cp.name}</span>
+                    <span class="text-secondary">${(cp.size / 1024 / 1024).toFixed(1)} MB</span>
+                </div>
+            `).join('');
+        }
+
+        function hideTrainingDetails() {
+            document.getElementById('trainingDetails').style.display = 'none';
+            currentJobId = null;
+        }
+
+        async function cancelTraining(jobId) {
+            if (!confirm('Are you sure you want to cancel this training job?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/training/jobs/${jobId}/cancel`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Training cancelled', 'success');
+                    loadTrainingJobs();
+                } else {
+                    showToast('Failed to cancel training', 'danger');
+                }
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadCustomModel() {
+            const path = document.getElementById('customModelPath').value;
+
+            if (!path.trim()) {
+                showToast('Please enter a model path', 'warning');
+                return;
+            }
+
+            showLoading('Loading model...');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/tts/model/load`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_path: path,
+                        model_type: document.getElementById('customModelType').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Model loaded successfully!', 'success');
+                    checkServerStatus();
+                } else {
+                    showToast(data.detail || 'Failed to load model', 'danger');
+                }
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function unloadModel() {
+            showLoading('Unloading model...');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/tts/model/unload`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Model unloaded', 'success');
+                    checkServerStatus();
+                }
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function refreshModelStatus() {
+            checkServerStatus();
+            showToast('Status refreshed', 'info');
+        }
+
+        // Utility functions
+        function getStatusBadgeClass(status) {
+            const classes = {
+                'pending': 'bg-secondary',
+                'uploading': 'bg-info',
+                'processing': 'bg-warning',
+                'preparing': 'bg-warning',
+                'training': 'bg-primary',
+                'completed': 'bg-success',
+                'failed': 'bg-danger',
+                'cancelled': 'bg-secondary'
+            };
+            return classes[status] || 'bg-secondary';
+        }
+
+        function base64ToBlob(base64, mimeType) {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: mimeType });
+        }
+
+        function showLoading(text = 'Processing...') {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast show align-items-center text-white bg-${type} border-0`;
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+            document.getElementById('toastContainer').appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+        }
+    </script>
+</body>
+</html>

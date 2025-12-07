@@ -1,0 +1,182 @@
+### F5-TTS API Server - HTTP Examples
+### Use with VS Code REST Client or IntelliJ HTTP Client
+
+@baseUrl = http://localhost:8001
+
+### ============================================
+### STATUS ENDPOINTS
+### ============================================
+
+### Get Server Info
+GET {{baseUrl}}/
+
+### Get Detailed Status
+GET {{baseUrl}}/status
+
+### Health Check
+GET {{baseUrl}}/health
+
+
+### ============================================
+### TTS - VOICE GENERATION
+### ============================================
+
+### Generate Speech (JSON)
+POST {{baseUrl}}/api/tts/generate
+Content-Type: application/json
+
+{
+    "text": "Hello, this is a test of the F5-TTS voice cloning system. The voice should sound natural and clear.",
+    "reference_audio": "BASE64_ENCODED_AUDIO_HERE",
+    "reference_text": "This is the reference text for the audio sample.",
+    "speed": 1.0,
+    "nfe_step": 32,
+    "cfg_strength": 2.0,
+    "sway_sampling_coef": -1.0,
+    "clean_audio": true,
+    "noise_reduction_strength": 0.3,
+    "remove_silence": false,
+    "seed": null
+}
+
+### Batch Generate Speech
+POST {{baseUrl}}/api/tts/generate/batch
+Content-Type: application/json
+
+{
+    "texts": [
+        "First sentence to synthesize.",
+        "Second sentence with different content.",
+        "Third and final sentence for this batch."
+    ],
+    "reference_audio": "BASE64_ENCODED_AUDIO_HERE",
+    "reference_text": "Reference audio transcript",
+    "speed": 1.0,
+    "nfe_step": 32,
+    "cfg_strength": 2.0
+}
+
+### Get Model Status
+GET {{baseUrl}}/api/tts/model/status
+
+### Load Custom Model
+POST {{baseUrl}}/api/tts/model/load
+Content-Type: application/json
+
+{
+    "model_path": "D:/models/custom_checkpoint.pt",
+    "model_type": "F5TTS_v1_Base"
+}
+
+### Unload Model
+POST {{baseUrl}}/api/tts/model/unload
+
+
+### ============================================
+### DATASETS
+### ============================================
+
+### Create New Dataset
+POST {{baseUrl}}/api/datasets/create
+Content-Type: application/json
+
+{
+    "name": "my_voice_dataset",
+    "description": "Custom voice dataset for fine-tuning",
+    "language": "en",
+    "is_finetune": true
+}
+
+### List All Datasets
+GET {{baseUrl}}/api/datasets/
+
+### Get Dataset Details
+@datasetId = abc12345
+GET {{baseUrl}}/api/datasets/{{datasetId}}
+
+### Get Dataset Samples
+GET {{baseUrl}}/api/datasets/{{datasetId}}/samples?limit=50&offset=0
+
+### Prepare Dataset for Training
+POST {{baseUrl}}/api/datasets/{{datasetId}}/prepare
+
+### Get Datasets Summary
+GET {{baseUrl}}/api/datasets/stats/summary
+
+### Delete Dataset
+DELETE {{baseUrl}}/api/datasets/{{datasetId}}?delete_files=true
+
+
+### ============================================
+### TRAINING
+### ============================================
+
+### Start Training Job
+POST {{baseUrl}}/api/training/start
+Content-Type: application/json
+
+{
+    "dataset_id": "abc12345",
+    "config": {
+        "exp_name": "F5TTS_v1_Base",
+        "learning_rate": 1e-5,
+        "batch_size_per_gpu": 3200,
+        "batch_size_type": "frame",
+        "max_samples": 64,
+        "epochs": 100,
+        "num_warmup_updates": 20000,
+        "save_per_updates": 5000,
+        "keep_last_n_checkpoints": 5,
+        "grad_accumulation_steps": 1,
+        "max_grad_norm": 1.0,
+        "tokenizer": "pinyin",
+        "use_pretrained": true,
+        "pretrained_path": null,
+        "use_bnb_optimizer": false,
+        "logger": null
+    },
+    "resume_from": null
+}
+
+### List Training Jobs
+GET {{baseUrl}}/api/training/jobs
+
+### Get Training Job Details
+@jobId = job12345
+GET {{baseUrl}}/api/training/jobs/{{jobId}}
+
+### Get Training Logs
+GET {{baseUrl}}/api/training/jobs/{{jobId}}/logs?lines=100
+
+### List Checkpoints
+GET {{baseUrl}}/api/training/jobs/{{jobId}}/checkpoints
+
+### Cancel Training Job
+POST {{baseUrl}}/api/training/jobs/{{jobId}}/cancel
+
+### Delete Training Job
+DELETE {{baseUrl}}/api/training/jobs/{{jobId}}?delete_checkpoints=false
+
+### Get Default Training Config
+GET {{baseUrl}}/api/training/config/defaults
+
+### Get Training Stats
+GET {{baseUrl}}/api/training/stats
+
+
+### ============================================
+### LEGACY ENDPOINTS (Backward Compatibility)
+### ============================================
+
+### Generate Speech (Legacy)
+POST {{baseUrl}}/generate
+Content-Type: application/json
+
+{
+    "text": "Hello, this is a test.",
+    "reference_audio": "BASE64_ENCODED_AUDIO_HERE",
+    "reference_text": "Reference text",
+    "speed": 1.0,
+    "nfe_step": 32,
+    "cfg_strength": 2.0
+}

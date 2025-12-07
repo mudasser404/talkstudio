@@ -1,0 +1,730 @@
+{
+	"info": {
+		"_postman_id": "f5tts-api-collection",
+		"name": "F5-TTS API Server",
+		"description": "Complete API collection for F5-TTS Voice Cloning and Training Server",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8001",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Status",
+			"item": [
+				{
+					"name": "Get Server Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": ["{{base_url}}"],
+							"path": [""]
+						},
+						"description": "Get basic server information and status"
+					}
+				},
+				{
+					"name": "Get Detailed Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["status"]
+						},
+						"description": "Get detailed server status including GPU info"
+					}
+				},
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["health"]
+						},
+						"description": "Health check endpoint for load balancers"
+					}
+				}
+			]
+		},
+		{
+			"name": "TTS - Voice Generation",
+			"item": [
+				{
+					"name": "Generate Speech (Base64)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"text\": \"Hello, this is a test of the F5-TTS voice cloning system.\",\n    \"reference_audio\": \"<BASE64_ENCODED_AUDIO>\",\n    \"reference_text\": \"This is the reference text for the audio.\",\n    \"speed\": 1.0,\n    \"nfe_step\": 32,\n    \"cfg_strength\": 2.0,\n    \"sway_sampling_coef\": -1.0,\n    \"clean_audio\": true,\n    \"noise_reduction_strength\": 0.3,\n    \"remove_silence\": false,\n    \"seed\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tts/generate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tts", "generate"]
+						},
+						"description": "Generate speech from text using base64 encoded reference audio"
+					}
+				},
+				{
+					"name": "Generate Speech (File Upload)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "text",
+									"value": "Hello, this is a test of voice cloning.",
+									"type": "text"
+								},
+								{
+									"key": "reference_audio",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "reference_text",
+									"value": "Reference audio transcript",
+									"type": "text"
+								},
+								{
+									"key": "speed",
+									"value": "1.0",
+									"type": "text"
+								},
+								{
+									"key": "nfe_step",
+									"value": "32",
+									"type": "text"
+								},
+								{
+									"key": "cfg_strength",
+									"value": "2.0",
+									"type": "text"
+								},
+								{
+									"key": "clean_audio",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "remove_silence",
+									"value": "false",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tts/generate/file",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tts", "generate", "file"]
+						},
+						"description": "Generate speech with file upload for reference audio"
+					}
+				},
+				{
+					"name": "Batch Generate Speech",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"texts\": [\n        \"First sentence to generate.\",\n        \"Second sentence to generate.\",\n        \"Third sentence to generate.\"\n    ],\n    \"reference_audio\": \"<BASE64_ENCODED_AUDIO>\",\n    \"reference_text\": \"Reference audio transcript\",\n    \"speed\": 1.0,\n    \"nfe_step\": 32,\n    \"cfg_strength\": 2.0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tts/generate/batch",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tts", "generate", "batch"]
+						},
+						"description": "Generate speech for multiple texts in batch"
+					}
+				},
+				{
+					"name": "Transcribe Audio",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "audio",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "language",
+									"value": "en",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tts/transcribe",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tts", "transcribe"]
+						},
+						"description": "Transcribe audio to text using Whisper"
+					}
+				},
+				{
+					"name": "Get Model Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tts/model/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tts", "model", "status"]
+						},
+						"description": "Get current model status"
+					}
+				},
+				{
+					"name": "Load Custom Model",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"model_path\": \"/path/to/model/checkpoint.pt\",\n    \"model_type\": \"F5TTS_v1_Base\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tts/model/load",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tts", "model", "load"]
+						},
+						"description": "Load a specific model checkpoint"
+					}
+				},
+				{
+					"name": "Unload Model",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tts/model/unload",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tts", "model", "unload"]
+						},
+						"description": "Unload the current model to free memory"
+					}
+				}
+			]
+		},
+		{
+			"name": "Datasets",
+			"item": [
+				{
+					"name": "Create Dataset",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"my_voice_dataset\",\n    \"description\": \"Custom voice dataset for training\",\n    \"language\": \"en\",\n    \"is_finetune\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/datasets/create",
+							"host": ["{{base_url}}"],
+							"path": ["api", "datasets", "create"]
+						},
+						"description": "Create a new dataset"
+					}
+				},
+				{
+					"name": "Upload Single Audio",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "audio",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "text",
+									"value": "The transcript of the audio file.",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/datasets/:dataset_id/upload",
+							"host": ["{{base_url}}"],
+							"path": ["api", "datasets", ":dataset_id", "upload"],
+							"variable": [
+								{
+									"key": "dataset_id",
+									"value": "abc12345"
+								}
+							]
+						},
+						"description": "Upload a single audio file to dataset"
+					}
+				},
+				{
+					"name": "Upload Batch Audio",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "audios",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "texts",
+									"value": "[\"First audio transcript\", \"Second audio transcript\", \"Third audio transcript\"]",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/datasets/:dataset_id/upload/batch",
+							"host": ["{{base_url}}"],
+							"path": ["api", "datasets", ":dataset_id", "upload", "batch"],
+							"variable": [
+								{
+									"key": "dataset_id",
+									"value": "abc12345"
+								}
+							]
+						},
+						"description": "Upload multiple audio files to dataset"
+					}
+				},
+				{
+					"name": "Upload Audio (Base64)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "audio_base64",
+									"value": "<BASE64_ENCODED_AUDIO>",
+									"type": "text"
+								},
+								{
+									"key": "filename",
+									"value": "audio_001.wav",
+									"type": "text"
+								},
+								{
+									"key": "text",
+									"value": "The transcript of the audio file.",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/datasets/:dataset_id/upload/base64",
+							"host": ["{{base_url}}"],
+							"path": ["api", "datasets", ":dataset_id", "upload", "base64"],
+							"variable": [
+								{
+									"key": "dataset_id",
+									"value": "abc12345"
+								}
+							]
+						},
+						"description": "Upload audio file as base64 string"
+					}
+				},
+				{
+					"name": "Prepare Dataset for Training",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/datasets/:dataset_id/prepare",
+							"host": ["{{base_url}}"],
+							"path": ["api", "datasets", ":dataset_id", "prepare"],
+							"variable": [
+								{
+									"key": "dataset_id",
+									"value": "abc12345"
+								}
+							]
+						},
+						"description": "Prepare dataset for training (converts to arrow format)"
+					}
+				},
+				{
+					"name": "Import from Folder",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "folder_path",
+									"value": "D:/datasets/my_voice_data",
+									"type": "text"
+								},
+								{
+									"key": "metadata_file",
+									"value": "metadata.csv",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/datasets/:dataset_id/import",
+							"host": ["{{base_url}}"],
+							"path": ["api", "datasets", ":dataset_id", "import"],
+							"variable": [
+								{
+									"key": "dataset_id",
+									"value": "abc12345"
+								}
+							]
+						},
+						"description": "Import dataset from existing folder with wavs/ and metadata.csv"
+					}
+				},
+				{
+					"name": "List All Datasets",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/datasets/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "datasets", ""]
+						},
+						"description": "List all datasets"
+					}
+				},
+				{
+					"name": "Get Dataset Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/datasets/:dataset_id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "datasets", ":dataset_id"],
+							"variable": [
+								{
+									"key": "dataset_id",
+									"value": "abc12345"
+								}
+							]
+						},
+						"description": "Get dataset details"
+					}
+				},
+				{
+					"name": "Get Dataset Samples",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/datasets/:dataset_id/samples?limit=100&offset=0",
+							"host": ["{{base_url}}"],
+							"path": ["api", "datasets", ":dataset_id", "samples"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "100"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							],
+							"variable": [
+								{
+									"key": "dataset_id",
+									"value": "abc12345"
+								}
+							]
+						},
+						"description": "Get samples from dataset"
+					}
+				},
+				{
+					"name": "Delete Dataset",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/datasets/:dataset_id?delete_files=true",
+							"host": ["{{base_url}}"],
+							"path": ["api", "datasets", ":dataset_id"],
+							"query": [
+								{
+									"key": "delete_files",
+									"value": "true"
+								}
+							],
+							"variable": [
+								{
+									"key": "dataset_id",
+									"value": "abc12345"
+								}
+							]
+						},
+						"description": "Delete a dataset"
+					}
+				},
+				{
+					"name": "Get Datasets Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/datasets/stats/summary",
+							"host": ["{{base_url}}"],
+							"path": ["api", "datasets", "stats", "summary"]
+						},
+						"description": "Get summary statistics for all datasets"
+					}
+				}
+			]
+		},
+		{
+			"name": "Training",
+			"item": [
+				{
+					"name": "Start Training Job",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dataset_id\": \"abc12345\",\n    \"config\": {\n        \"exp_name\": \"F5TTS_v1_Base\",\n        \"learning_rate\": 1e-5,\n        \"batch_size_per_gpu\": 3200,\n        \"batch_size_type\": \"frame\",\n        \"max_samples\": 64,\n        \"epochs\": 100,\n        \"num_warmup_updates\": 20000,\n        \"save_per_updates\": 5000,\n        \"keep_last_n_checkpoints\": 5,\n        \"grad_accumulation_steps\": 1,\n        \"max_grad_norm\": 1.0,\n        \"tokenizer\": \"pinyin\",\n        \"use_pretrained\": true,\n        \"pretrained_path\": null,\n        \"use_bnb_optimizer\": false,\n        \"logger\": null\n    },\n    \"resume_from\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/training/start",
+							"host": ["{{base_url}}"],
+							"path": ["api", "training", "start"]
+						},
+						"description": "Start a new training job"
+					}
+				},
+				{
+					"name": "List Training Jobs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/training/jobs",
+							"host": ["{{base_url}}"],
+							"path": ["api", "training", "jobs"]
+						},
+						"description": "List all training jobs"
+					}
+				},
+				{
+					"name": "Get Training Job Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/training/jobs/:job_id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "training", "jobs", ":job_id"],
+							"variable": [
+								{
+									"key": "job_id",
+									"value": "job12345"
+								}
+							]
+						},
+						"description": "Get training job details"
+					}
+				},
+				{
+					"name": "Get Training Logs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/training/jobs/:job_id/logs?lines=100",
+							"host": ["{{base_url}}"],
+							"path": ["api", "training", "jobs", ":job_id", "logs"],
+							"query": [
+								{
+									"key": "lines",
+									"value": "100"
+								}
+							],
+							"variable": [
+								{
+									"key": "job_id",
+									"value": "job12345"
+								}
+							]
+						},
+						"description": "Get training logs for a job"
+					}
+				},
+				{
+					"name": "List Checkpoints",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/training/jobs/:job_id/checkpoints",
+							"host": ["{{base_url}}"],
+							"path": ["api", "training", "jobs", ":job_id", "checkpoints"],
+							"variable": [
+								{
+									"key": "job_id",
+									"value": "job12345"
+								}
+							]
+						},
+						"description": "List checkpoints for a training job"
+					}
+				},
+				{
+					"name": "Cancel Training Job",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/training/jobs/:job_id/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["api", "training", "jobs", ":job_id", "cancel"],
+							"variable": [
+								{
+									"key": "job_id",
+									"value": "job12345"
+								}
+							]
+						},
+						"description": "Cancel a running training job"
+					}
+				},
+				{
+					"name": "Delete Training Job",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/training/jobs/:job_id?delete_checkpoints=false",
+							"host": ["{{base_url}}"],
+							"path": ["api", "training", "jobs", ":job_id"],
+							"query": [
+								{
+									"key": "delete_checkpoints",
+									"value": "false"
+								}
+							],
+							"variable": [
+								{
+									"key": "job_id",
+									"value": "job12345"
+								}
+							]
+						},
+						"description": "Delete a training job"
+					}
+				},
+				{
+					"name": "Get Default Training Config",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/training/config/defaults",
+							"host": ["{{base_url}}"],
+							"path": ["api", "training", "config", "defaults"]
+						},
+						"description": "Get default training configuration"
+					}
+				},
+				{
+					"name": "Get Training Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/training/stats",
+							"host": ["{{base_url}}"],
+							"path": ["api", "training", "stats"]
+						},
+						"description": "Get training statistics"
+					}
+				}
+			]
+		},
+		{
+			"name": "Legacy",
+			"item": [
+				{
+					"name": "Generate Speech (Legacy)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"text\": \"Hello, this is a test.\",\n    \"reference_audio\": \"<BASE64_ENCODED_AUDIO>\",\n    \"reference_text\": \"Reference text\",\n    \"speed\": 1.0,\n    \"nfe_step\": 32,\n    \"cfg_strength\": 2.0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/generate",
+							"host": ["{{base_url}}"],
+							"path": ["generate"]
+						},
+						"description": "Legacy endpoint for backward compatibility"
+					}
+				}
+			]
+		}
+	]
+}
