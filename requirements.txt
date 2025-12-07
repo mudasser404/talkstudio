@@ -13,9 +13,9 @@ pydantic-settings>=2.1.0
 
 # PyTorch with CUDA (install separately based on your CUDA version)
 # For CUDA 11.8:
-# pip install torch==2.1.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
+pip install torch==2.1.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
 # For CUDA 12.1:
-# pip install torch==2.1.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu121
+pip install torch==2.1.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu121
 
 # Audio Processing
 soundfile>=0.12.1
@@ -49,10 +49,10 @@ wandb>=0.16.0
 tensorboard>=2.15.0
 
 # Optional: 8-bit optimizer (Linux only)
-# bitsandbytes>=0.41.0
+bitsandbytes>=0.41.0
 
 # F5-TTS Model - Install from local folder or GitHub
 # Option 1: Install from local F5-TTS folder
-# pip install -e ./F5-TTS
+pip install -e ./F5-TTS
 # Option 2: Install from GitHub
 # pip install git+https://github.com/SWivid/F5-TTS.git
