@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import requests
 import runpod
-import torch                    # 👈 NEW: for torch.cuda.is_available()
+import torch
 from scipy.io import wavfile
 
 
@@ -254,6 +254,8 @@ def _tts_chunk(
     gen_text: str,
     speed: float,
     remove_silence: bool,
+    nfe_step: int,
+    target_rms: float,
 ) -> np.ndarray:
     """
     Run F5TTS on a single text chunk and return it as a numpy array.
@@ -268,6 +270,8 @@ def _tts_chunk(
             gen_text=gen_text,
             speed=speed,
             remove_silence=remove_silence,
+            nfe_step=nfe_step,        # quality (32/64 steps)
+            target_rms=target_rms,    # volume
             file_wave=out_path,
             file_spec=None,
         )
@@ -339,6 +343,19 @@ def generate_speech(job: Dict[str, Any]) -> Dict[str, Any]:
     speed: float = float(inp.get("speed", 0.7))  # slower default
     remove_silence: bool = bool(inp.get("remove_silence", False))
 
+    # Generation quality: "standard" (32) vs "premium" (64)
+    quality = (inp.get("quality") or "standard").lower()
+    if quality == "premium":
+        nfe_step = 64
+    else:
+        nfe_step = 32
+
+    # Volume: 0.0–2.0 → map linearly on top of default target_rms ≈ 0.1
+    volume = float(inp.get("volume", 1.0))
+    if volume < 0.0:
+        volume = 0.0
+    target_rms = 0.1 * volume
+
     api = get_f5tts_model()
 
     # ---- 5) Run TTS per chunk and concatenate ----
@@ -360,6 +377,8 @@ def generate_speech(job: Dict[str, Any]) -> Dict[str, Any]:
                     gen_text=cleaned,
                     speed=speed,
                     remove_silence=remove_silence,
+                    nfe_step=nfe_step,
+                    target_rms=target_rms,
                 )
             except Exception as e:
                 print(f"[TTS] Error on chunk {idx}: {e}")
@@ -399,6 +418,8 @@ def generate_speech(job: Dict[str, Any]) -> Dict[str, Any]:
             "sample_rate": sr_final,
             "ref_text_used": ref_text,
             "num_chunks": len(chunks),
+            "quality": quality,
+            "volume": volume,
         }
 
     except Exception as e:
