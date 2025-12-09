@@ -362,6 +362,9 @@ def generate_speech(job: Dict[str, Any]) -> Dict[str, Any]:
     all_segments: List[np.ndarray] = []
     sr_final: Optional[int] = None
 
+    # small pause between chunks (seconds)
+    pause_seconds = float(inp.get("pause_s", 0.12))  # default 120ms
+
     try:
         for idx, chunk_text in enumerate(chunks, start=1):
             cleaned = _clean_for_tts(chunk_text)
@@ -392,6 +395,14 @@ def generate_speech(job: Dict[str, Any]) -> Dict[str, Any]:
 
             all_segments.append(audio_np)
 
+            # ---------- HERE: add small pause between chunks ----------
+            if idx < len(chunks) and pause_seconds > 0.0:
+                pause_samples = int(sr_final * pause_seconds)
+                if pause_samples > 0:
+                    silence = np.zeros(pause_samples, dtype=np.int16)
+                    all_segments.append(silence)
+            # ----------------------------------------------------------
+
         if not all_segments:
             return {"error": "No audio was generated for any chunk."}
 
@@ -420,6 +431,7 @@ def generate_speech(job: Dict[str, Any]) -> Dict[str, Any]:
             "num_chunks": len(chunks),
             "quality": quality,
             "volume": volume,
+            "pause_s": pause_seconds,
         }
 
     except Exception as e:
