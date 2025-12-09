@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import requests
 import runpod
+import torch                    # 👈 NEW: for torch.cuda.is_available()
 from scipy.io import wavfile
 
 
@@ -92,19 +93,32 @@ def get_asr_model() -> WhisperModel:
     """
     High-quality ASR for reference audio.
     Uses Whisper large-v3 via faster-whisper.
+    Prefer GPU (cuda) when available.
     """
     global _asr_model
     if _asr_model is None:
         model_name = "large-v3"  # best quality; change to "medium.en" if VRAM is tight
-        device = "cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu"
-        compute_type = "float16" if device == "cuda" else "int8"
+
+        # Debug info so you can see in logs what PyTorch sees
+        print("[ASR] torch.cuda.is_available():", torch.cuda.is_available())
+        print("[ASR] CUDA_VISIBLE_DEVICES:", os.environ.get("CUDA_VISIBLE_DEVICES"))
+
+        if torch.cuda.is_available():
+            device = "cuda"
+            compute_type = "float16"
+        else:
+            device = "cpu"
+            compute_type = "int8"
 
         _asr_model = WhisperModel(
             model_name,
             device=device,
             compute_type=compute_type,
         )
-        print(f"[get_asr_model] Loaded faster-whisper '{model_name}' on {device} ({compute_type})")
+        print(
+            f"[get_asr_model] Loaded faster-whisper '{model_name}' "
+            f"on {device} ({compute_type})"
+        )
     return _asr_model
 
 
@@ -188,7 +202,7 @@ def _split_into_sentences(text: str) -> List[str]:
 
 def _chunk_text(
     text: str,
-    max_chars: int = 200,   # 👈 smaller default for stability
+    max_chars: int = 200,   # smaller default for stability
     min_chars: int = 80,
 ) -> List[str]:
     """
