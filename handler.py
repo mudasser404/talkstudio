@@ -1,301 +1,404 @@
-"""
-RunPod Serverless Handler for F5-TTS Voice Cloning API
-Deploy this on RunPod Serverless with GPU
-"""
-
-import os
-import sys
-import uuid
 import base64
+import os
+import re
 import tempfile
-import logging
-import requests
 from pathlib import Path
-from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Add paths
-PROJECT_ROOT = Path(__file__).parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
-F5_TTS_PATH = PROJECT_ROOT / "F5-TTS" / "src"
-if str(F5_TTS_PATH) not in sys.path:
-    sys.path.insert(0, str(F5_TTS_PATH))
-
-# Global model instance
-model = None
+import numpy as np
+import requests
+import runpod
+from scipy.io import wavfile
 
 
-def load_model():
-    """Load F5-TTS model (called once during cold start)"""
-    global model
-    if model is not None:
-        return model
-
-    try:
-        import torch
-        from f5_tts.api import F5TTS
-
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        logger.info(f"Loading F5-TTS model on {device}...")
-
-        model = F5TTS(
-            model="F5TTS_v1_Base",
-            device=device
-        )
-
-        logger.info("F5-TTS model loaded successfully!")
-        return model
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
-        raise
-
-
-def download_audio_from_url(url: str) -> bytes:
-    """Download audio file from URL"""
-    try:
-        logger.info(f"Downloading audio from: {url}")
-        response = requests.get(url, timeout=60, stream=True)
-        response.raise_for_status()
-
-        # Check content type
-        content_type = response.headers.get('content-type', '')
-        logger.info(f"Content-Type: {content_type}")
-
-        return response.content
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to download audio: {e}")
-        raise Exception(f"Failed to download audio from URL: {str(e)}")
-
-
-def generate_speech(
-    job_id: str,
-    text: str,
-    reference_audio_url: str,
-    reference_text: str = "",
-    speed: float = 1.0,
-    nfe_step: int = 32,
-    cfg_strength: float = 2.0,
-    sway_sampling_coef: float = -1.0,
-    seed: int = None
-):
-    """Generate speech using F5-TTS"""
-    import torch
-    import soundfile as sf
-
-    global model
-    if model is None:
-        model = load_model()
-
-    temp_ref_path = None
-    temp_out_path = None
-    started_at = datetime.utcnow().isoformat()
-
-    try:
-        # Download reference audio from URL
-        audio_bytes = download_audio_from_url(reference_audio_url)
-
-        # Determine file extension from URL or default to wav
-        url_lower = reference_audio_url.lower()
-        if '.mp3' in url_lower:
-            ext = '.mp3'
-        elif '.wav' in url_lower:
-            ext = '.wav'
-        elif '.flac' in url_lower:
-            ext = '.flac'
-        elif '.ogg' in url_lower:
-            ext = '.ogg'
-        else:
-            ext = '.wav'
-
-        # Save to temp file
-        temp_ref_path = tempfile.mktemp(suffix=ext)
-        with open(temp_ref_path, 'wb') as f:
-            f.write(audio_bytes)
-
-        logger.info(f"Reference audio saved to: {temp_ref_path}, size: {len(audio_bytes)} bytes")
-
-        # Set seed if provided
-        if seed is not None:
-            torch.manual_seed(seed)
-            if torch.cuda.is_available():
-                torch.cuda.manual_seed(seed)
-        else:
-            seed = torch.randint(0, 2**32 - 1, (1,)).item()
-
-        # Generate audio
-        temp_out_path = tempfile.mktemp(suffix=".wav")
-
-        logger.info(f"Generating speech for text: {text[:50]}...")
-
-        wav, sr, _ = model.infer(
-            ref_file=temp_ref_path,
-            ref_text=reference_text,
-            gen_text=text,
-            file_wave=temp_out_path,
-            speed=speed,
-            nfe_step=nfe_step,
-            cfg_strength=cfg_strength,
-            sway_sampling_coef=sway_sampling_coef
-        )
-
-        # Read generated audio
-        audio_data, sample_rate = sf.read(temp_out_path)
-
-        # Calculate duration
-        duration = len(audio_data) / sample_rate
-
-        # Encode to base64
-        with open(temp_out_path, 'rb') as f:
-            audio_base64 = base64.b64encode(f.read()).decode('utf-8')
-
-        file_size = os.path.getsize(temp_out_path)
-        completed_at = datetime.utcnow().isoformat()
-
-        logger.info(f"Speech generated successfully! Duration: {duration:.2f}s")
-
-        return {
-            "success": True,
-            "job_id": job_id,
-            "status": "completed",
-            "audio_base64": audio_base64,
-            "duration": round(duration, 2),
-            "sample_rate": sample_rate,
-            "file_size": file_size,
-            "seed": seed,
-            "started_at": started_at,
-            "completed_at": completed_at,
-            "parameters": {
-                "text": text,
-                "reference_audio_url": reference_audio_url,
-                "reference_text": reference_text,
-                "speed": speed,
-                "nfe_step": nfe_step,
-                "cfg_strength": cfg_strength,
-                "sway_sampling_coef": sway_sampling_coef
-            }
-        }
-
-    except Exception as e:
-        logger.error(f"Generation error: {e}")
-        return {
-            "success": False,
-            "job_id": job_id,
-            "status": "failed",
-            "error": str(e),
-            "started_at": started_at,
-            "completed_at": datetime.utcnow().isoformat()
-        }
-
-    finally:
-        # Cleanup temp files
-        if temp_ref_path and os.path.exists(temp_ref_path):
-            os.remove(temp_ref_path)
-        if temp_out_path and os.path.exists(temp_out_path):
-            os.remove(temp_out_path)
-
-
-def handler(job):
+# ==============================
+# Patch F5-TTS to avoid torchaudio/torchcodec
+# ==============================
+def patch_utils_infer() -> None:
     """
-    RunPod Serverless Handler
+    Patch src/f5_tts/infer/utils_infer.py so that:
 
-    Expected input format:
-    {
-        "input": {
-            "text": "Text to synthesize",
-            "reference_audio_url": "https://example.com/audio.wav",
-            "reference_text": "Optional transcript of reference audio",
-            "speed": 1.0,
-            "nfe_step": 32,
-            "cfg_strength": 2.0,
-            "sway_sampling_coef": -1.0,
-            "seed": null
-        }
-    }
+        audio, sr = torchaudio.load(ref_audio)
 
-    Response format:
-    {
-        "success": true,
-        "job_id": "unique-job-id",
-        "status": "completed",
-        "audio_base64": "base64_encoded_wav_audio",
-        "duration": 3.5,
-        "sample_rate": 24000,
-        "file_size": 168000,
-        "seed": 12345678,
-        "started_at": "2024-01-01T00:00:00",
-        "completed_at": "2024-01-01T00:00:05",
-        "parameters": {
-            "text": "...",
-            "reference_audio_url": "...",
-            ...
-        }
-    }
+    is replaced with a SciPy-based loader, avoiding TorchCodec completely.
     """
-    job_input = job.get("input", {})
+    utils_file = Path(__file__).parent / "src" / "f5_tts" / "infer" / "utils_infer.py"
 
-    # Generate unique job ID
-    job_id = str(uuid.uuid4())
+    if not utils_file.exists():
+        print(f"[patch_utils_infer] Warning: {utils_file} not found, skipping patch.")
+        return
 
-    # Check for status action
-    action = job_input.get("action", "generate")
+    text = utils_file.read_text()
 
-    if action == "status":
-        import torch
-        return {
-            "success": True,
-            "job_id": job_id,
-            "status": "ready",
-            "model_loaded": model is not None,
-            "gpu_available": torch.cuda.is_available(),
-            "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
-            "timestamp": datetime.utcnow().isoformat()
-        }
+    if "audio, sr = torchaudio.load(ref_audio)" not in text:
+        print("[patch_utils_infer] No torchaudio.load() found (maybe already patched).")
+        return
 
-    # Validate required parameters
-    text = job_input.get("text")
-    reference_audio_url = job_input.get("reference_audio_url")
+    old_line = "    audio, sr = torchaudio.load(ref_audio)"
 
-    if not text:
-        return {
-            "success": False,
-            "job_id": job_id,
-            "status": "failed",
-            "error": "Missing required parameter: 'text'"
-        }
-
-    if not reference_audio_url:
-        return {
-            "success": False,
-            "job_id": job_id,
-            "status": "failed",
-            "error": "Missing required parameter: 'reference_audio_url'"
-        }
-
-    # Generate speech
-    return generate_speech(
-        job_id=job_id,
-        text=text,
-        reference_audio_url=reference_audio_url,
-        reference_text=job_input.get("reference_text", ""),
-        speed=job_input.get("speed", 1.0),
-        nfe_step=job_input.get("nfe_step", 32),
-        cfg_strength=job_input.get("cfg_strength", 2.0),
-        sway_sampling_coef=job_input.get("sway_sampling_coef", -1.0),
-        seed=job_input.get("seed")
+    new_block = (
+        "    # Load audio with SciPy instead of torchaudio.load to avoid TorchCodec backend\n"
+        "    from scipy.io import wavfile\n"
+        "    import numpy as np\n"
+        "    import torch\n"
+        "\n"
+        "    sr, audio_np = wavfile.read(ref_audio)\n"
+        "\n"
+        "    # Convert to float32 in [-1, 1]\n"
+        "    if np.issubdtype(audio_np.dtype, np.integer):\n"
+        "        max_val = np.iinfo(audio_np.dtype).max\n"
+        "        audio_np = audio_np.astype(np.float32) / max_val\n"
+        "    else:\n"
+        "        audio_np = audio_np.astype(np.float32)\n"
+        "\n"
+        "    if audio_np.ndim == 1:\n"
+        "        audio = torch.from_numpy(audio_np).unsqueeze(0)  # (1, T)\n"
+        "    else:\n"
+        "        # (T, C) -> (C, T)\n"
+        "        audio = torch.from_numpy(audio_np.T)\n"
     )
 
+    text = text.replace(old_line, new_block)
+    utils_file.write_text(text)
+    print("[patch_utils_infer] ✓ Patched utils_infer.py to use SciPy audio loading.")
 
-# RunPod entry point
-if __name__ == "__main__":
-    import runpod
 
-    # Pre-load model during cold start
-    logger.info("Pre-loading model...")
-    load_model()
-    logger.info("Model ready, starting RunPod handler...")
+# Apply patch BEFORE importing F5TTS
+patch_utils_infer()
 
-    runpod.serverless.start({"handler": handler})
+from f5_tts.api import F5TTS  # noqa: E402
+from faster_whisper import WhisperModel  # noqa: E402
+
+
+# ==============================
+# Global models (reused across jobs)
+# ==============================
+_f5tts_model: Optional[F5TTS] = None
+_asr_model: Optional[WhisperModel] = None
+
+
+def get_f5tts_model() -> F5TTS:
+    global _f5tts_model
+    if _f5tts_model is None:
+        _f5tts_model = F5TTS(
+            model="F5TTS_v1_Base",
+            hf_cache_dir="/root/.cache/huggingface/hub",
+        )
+        print("[get_f5tts_model] Loaded F5TTS_v1_Base")
+    return _f5tts_model
+
+
+def get_asr_model() -> WhisperModel:
+    """
+    High-quality ASR for reference audio.
+    Uses Whisper large-v3 via faster-whisper.
+    """
+    global _asr_model
+    if _asr_model is None:
+        model_name = "large-v3"  # best quality; change to "medium.en" if VRAM is tight
+        device = "cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu"
+        compute_type = "float16" if device == "cuda" else "int8"
+
+        _asr_model = WhisperModel(
+            model_name,
+            device=device,
+            compute_type=compute_type,
+        )
+        print(f"[get_asr_model] Loaded faster-whisper '{model_name}' on {device} ({compute_type})")
+    return _asr_model
+
+
+# ==============================
+# Helpers: file handling
+# ==============================
+def _save_b64_to_temp(b64_str: str, suffix: str = ".wav") -> str:
+    audio_bytes = base64.b64decode(b64_str)
+    fd, path = tempfile.mkstemp(suffix=suffix)
+    with os.fdopen(fd, "wb") as f:
+        f.write(audio_bytes)
+    return path
+
+
+def _download_to_temp(url: str, suffix: str = ".wav") -> str:
+    resp = requests.get(url, timeout=60)
+    resp.raise_for_status()
+    fd, path = tempfile.mkstemp(suffix=suffix)
+    with os.fdopen(fd, "wb") as f:
+        f.write(resp.content)
+    return path
+
+
+def _get_ref_audio_path(inp: Dict[str, Any]) -> str:
+    ref_b64 = inp.get("ref_audio_base64")
+    ref_url = inp.get("ref_audio_url")
+
+    if ref_b64:
+        return _save_b64_to_temp(ref_b64, suffix=".wav")
+    if ref_url:
+        return _download_to_temp(ref_url, suffix=".wav")
+
+    raise ValueError("Provide either 'ref_audio_base64' or 'ref_audio_url' in input.")
+
+
+# ==============================
+# Helpers: ASR (transcriber)
+# ==============================
+def _transcribe_ref_audio(ref_path: str, language: Optional[str] = None) -> str:
+    """
+    Use faster-whisper (large-v3) to get transcript of the reference audio.
+    This runs ONCE per job and is reused for all chunks.
+    """
+    model = get_asr_model()
+    segments, info = model.transcribe(
+        ref_path,
+        language=language,  # e.g. "en"; or None for auto-detect
+        beam_size=5,
+    )
+    parts = [seg.text.strip() for seg in segments if seg.text]
+    transcript = " ".join(parts).strip()
+    print(f"[ASR] language={info.language}, text='{transcript[:80]}...'")
+    return transcript
+
+
+# ==============================
+# Helpers: text normalization + chunking
+# ==============================
+def _clean_for_tts(text: str) -> str:
+    """
+    Normalize text before sending to F5TTS:
+      - remove parentheses and their contents
+      - collapse whitespace
+    This avoids some edge cases with punctuation.
+    """
+    # remove (...) blocks
+    text = re.sub(r"\([^)]*\)", "", text)
+    # collapse multiple spaces/newlines
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def _split_into_sentences(text: str) -> List[str]:
+    # Very simple sentence splitter based on punctuation.
+    text = text.strip()
+    if not text:
+        return []
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    return [s.strip() for s in sentences if s.strip()]
+
+
+def _chunk_text(
+    text: str,
+    max_chars: int = 200,   # 👈 smaller default for stability
+    min_chars: int = 80,
+) -> List[str]:
+    """
+    Split long text into chunks around sentence boundaries.
+
+    max_chars ~ how long each chunk should be (roughly).
+    min_chars ~ don't create very tiny chunks unless unavoidable.
+    """
+    sentences = _split_into_sentences(text)
+    if not sentences:
+        return [text.strip()] if text.strip() else []
+
+    chunks: List[str] = []
+    current = ""
+
+    for s in sentences:
+        if not current:
+            current = s
+            continue
+
+        # If adding this sentence keeps us under max_chars, keep accumulating
+        if len(current) + 1 + len(s) <= max_chars:
+            current = current + " " + s
+        else:
+            # If current is big enough, push it as a chunk
+            if len(current) >= min_chars:
+                chunks.append(current)
+                current = s
+            else:
+                # current too short, force-join and then flush
+                current = current + " " + s
+                chunks.append(current)
+                current = ""
+
+    if current.strip():
+        chunks.append(current.strip())
+
+    # Fallback: if somehow nothing, just return original text
+    return chunks or [text.strip()]
+
+
+# ==============================
+# Helpers: TTS per chunk
+# ==============================
+def _tts_chunk(
+    api: F5TTS,
+    ref_path: str,
+    ref_text: str,
+    gen_text: str,
+    speed: float,
+    remove_silence: bool,
+) -> np.ndarray:
+    """
+    Run F5TTS on a single text chunk and return it as a numpy array.
+    """
+    fd, out_path = tempfile.mkstemp(suffix=".wav")
+    os.close(fd)
+
+    try:
+        _wav, sr, _ = api.infer(
+            ref_file=ref_path,
+            ref_text=ref_text,
+            gen_text=gen_text,
+            speed=speed,
+            remove_silence=remove_silence,
+            file_wave=out_path,
+            file_spec=None,
+        )
+        sr_read, audio_np = wavfile.read(out_path)
+        assert sr_read == sr, "Sample rate mismatch between infer() and file"
+        return audio_np.astype(np.int16)  # assume 16-bit WAV
+    finally:
+        try:
+            if os.path.exists(out_path):
+                os.remove(out_path)
+        except Exception:
+            pass
+
+
+def _concat_audio(segments: List[np.ndarray]) -> np.ndarray:
+    """
+    Concatenate multiple audio segments along time axis.
+    Assumes all have same sample rate and channels.
+    """
+    if not segments:
+        return np.zeros(0, dtype=np.int16)
+
+    base = segments[0]
+    if base.ndim == 1:
+        return np.concatenate(segments, axis=0)
+
+    # multi-channel: assume (T, C)
+    return np.concatenate(segments, axis=0)
+
+
+# ==============================
+# Main RunPod job handler
+# ==============================
+def generate_speech(job: Dict[str, Any]) -> Dict[str, Any]:
+    inp: Dict[str, Any] = job.get("input") or {}
+
+    raw_text = (inp.get("text") or "").strip()
+    if not raw_text:
+        return {"error": "Missing 'text' in input."}
+
+    # ---- 1) Reference audio ----
+    try:
+        ref_path = _get_ref_audio_path(inp)
+    except Exception as e:
+        return {"error": f"Failed to load reference audio: {e}"}
+
+    # ---- 2) ref_text: use client-provided or ASR transcript ----
+    ref_text = (inp.get("ref_text") or "").strip()
+    language_hint = inp.get("language")  # e.g. "en"
+
+    if not ref_text:
+        try:
+            ref_text = _transcribe_ref_audio(ref_path, language=language_hint)
+        except Exception as e:
+            return {"error": f"ASR transcription failed: {e}"}
+
+    if not ref_text:
+        return {
+            "error": "ASR produced empty transcript. Please provide 'ref_text' manually."
+        }
+
+    # ---- 3) Chunking parameters ----
+    max_chars = int(inp.get("chunk_max_chars", 200))
+    min_chars = int(inp.get("chunk_min_chars", 80))
+    chunks = _chunk_text(raw_text, max_chars=max_chars, min_chars=min_chars)
+    print(f"[chunking] text length={len(raw_text)}, num_chunks={len(chunks)}")
+
+    # ---- 4) Synthesis settings ----
+    speed: float = float(inp.get("speed", 0.7))  # slower default
+    remove_silence: bool = bool(inp.get("remove_silence", False))
+
+    api = get_f5tts_model()
+
+    # ---- 5) Run TTS per chunk and concatenate ----
+    all_segments: List[np.ndarray] = []
+    sr_final: Optional[int] = None
+
+    try:
+        for idx, chunk_text in enumerate(chunks, start=1):
+            cleaned = _clean_for_tts(chunk_text)
+            if not cleaned:
+                continue
+
+            print(f"[TTS] Generating chunk {idx}/{len(chunks)}: {len(cleaned)} chars (cleaned)")
+            try:
+                audio_np = _tts_chunk(
+                    api=api,
+                    ref_path=ref_path,
+                    ref_text=ref_text,
+                    gen_text=cleaned,
+                    speed=speed,
+                    remove_silence=remove_silence,
+                )
+            except Exception as e:
+                print(f"[TTS] Error on chunk {idx}: {e}")
+                return {"error": f"TTS failed on chunk {idx}: {e}"}
+
+            if audio_np.size == 0:
+                continue
+
+            if sr_final is None:
+                sr_final = 24000  # F5TTS_v1_Base default
+
+            all_segments.append(audio_np)
+
+        if not all_segments:
+            return {"error": "No audio was generated for any chunk."}
+
+        final_audio = _concat_audio(all_segments)
+
+        # ---- 6) Write final WAV and base64-encode ----
+        fd, final_path = tempfile.mkstemp(suffix=".wav")
+        os.close(fd)
+
+        try:
+            wavfile.write(final_path, sr_final, final_audio)
+            with open(final_path, "rb") as f:
+                audio_bytes = f.read()
+            audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+        finally:
+            try:
+                if os.path.exists(final_path):
+                    os.remove(final_path)
+            except Exception:
+                pass
+
+        return {
+            "audio_base64": audio_b64,
+            "sample_rate": sr_final,
+            "ref_text_used": ref_text,
+            "num_chunks": len(chunks),
+        }
+
+    except Exception as e:
+        return {"error": f"Inference failed: {e}"}
+
+    finally:
+        try:
+            if os.path.exists(ref_path):
+                os.remove(ref_path)
+        except Exception:
+            pass
+
+
+# ==============================
+# RunPod serverless entry
+# ==============================
+runpod.serverless.start({"handler": generate_speech})
